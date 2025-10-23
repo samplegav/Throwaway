@@ -1,0 +1,24 @@
+implementation "org.axonframework.extensions.micrometer:axon-micrometer:4.9.0"
+
+# Expose metrics and Prometheus endpoints
+management.endpoints.web.exposure.include=health,metrics,prometheus
+
+# Optional: change Actuator base path
+# management.endpoints.web.base-path=/actuator
+
+import io.micrometer.core.instrument.MeterRegistry;
+import org.axonframework.extensions.micrometer.MicrometerConfig;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class AxonMetricsConfig {
+
+    @Bean
+    public MicrometerConfig axonMicrometerConfig(MeterRegistry meterRegistry) {
+        return MicrometerConfig.builder()
+                .meterRegistry(meterRegistry)
+                .build();
+    }
+}
+
