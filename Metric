@@ -1,16 +1,16 @@
 package com.example.axonmetricsdemo.config;
 
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.servlets.MetricsServlet;
 import org.axonframework.config.Configurer;
 import org.axonframework.config.DefaultConfigurer;
+import org.axonframework.config.Configuration;
 import org.axonframework.metrics.MessageCountingMonitor;
-import org.axonframework.messaging.MessageMonitor;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import com.codahale.metrics.servlets.MetricsServlet;
+import org.springframework.context.annotation.Configuration as SpringConfiguration;
 
-@Configuration
+@SpringConfiguration
 public class AxonMetricsConfig {
 
     @Bean
@@ -19,13 +19,13 @@ public class AxonMetricsConfig {
     }
 
     @Bean
-    public org.axonframework.config.Configuration axonConfiguration(MetricRegistry metricRegistry) {
+    public Configuration axonConfiguration(MetricRegistry metricRegistry) {
         Configurer configurer = DefaultConfigurer.defaultConfiguration()
-                .configureMessageMonitor((configuration, componentType, componentName) ->
-                        MessageCountingMonitor.buildMonitor(componentName, metricRegistry)
-                );
+            .configureMessageMonitor((c, componentType, componentName) ->
+                MessageCountingMonitor.buildMonitor(componentName, metricRegistry)
+            );
 
-        org.axonframework.config.Configuration configuration = configurer.buildConfiguration();
+        Configuration configuration = configurer.buildConfiguration();
         configuration.start();
         return configuration;
     }
