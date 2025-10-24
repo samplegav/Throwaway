@@ -1,45 +1,42 @@
+package com.example.axonmetricsdemo.config;
+
 import com.codahale.metrics.MetricRegistry;
 import org.axonframework.config.Configurer;
 import org.axonframework.config.DefaultConfigurer;
-import org.axonframework.metrics.GlobalMetricRegistry;
 import org.axonframework.metrics.MessageCountingMonitor;
-import org.axonframework.messaging.MessageMonitor;
 import org.axonframework.messaging.MessageMonitorFactory;
+import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import com.codahale.metrics.servlets.MetricsServlet;
 
 @Configuration
-public class AxonDropwizardConfig {
+public class AxonMetricsConfig {
 
     @Bean
-    public org.axonframework.config.Configuration axonConfig(MetricRegistry metricRegistry) {
-        GlobalMetricRegistry globalRegistry = new GlobalMetricRegistry(metricRegistry);
+    public MetricRegistry metricRegistry() {
+        return new MetricRegistry();
+    }
 
-        MessageMonitorFactory monitorFactory = (configuration, componentType, componentName) ->
-                MessageCountingMonitor.buildMonitor(componentName, metricRegistry);
+    @Bean
+    public org.axonframework.config.Configuration axonConfiguration(MetricRegistry metricRegistry) {
+        MessageMonitorFactory monitorFactory =
+                (configuration, componentType, componentName) ->
+                        MessageCountingMonitor.buildMonitor(componentName, metricRegistry);
 
         Configurer configurer = DefaultConfigurer.defaultConfiguration()
                 .configureMessageMonitor(monitorFactory);
 
         org.axonframework.config.Configuration configuration = configurer.buildConfiguration();
         configuration.start();
-
         return configuration;
     }
-}
-
-
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.servlets.MetricsServlet;
-import org.springframework.boot.web.servlet.ServletRegistrationBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-@Configuration
-public class MetricsServletConfig {
 
     @Bean
     public ServletRegistrationBean<MetricsServlet> metricsServlet(MetricRegistry metricRegistry) {
-        return new ServletRegistrationBean<>(new MetricsServlet(metricRegistry), "/metrics/*");
+        ServletRegistrationBean<MetricsServlet> bean =
+                new ServletRegistrationBean<>(new MetricsServlet(metricRegistry), "/metrics/*");
+        bean.setLoadOnStartup(1);
+        return bean;
     }
 }
