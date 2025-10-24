@@ -4,7 +4,7 @@ import com.codahale.metrics.MetricRegistry;
 import org.axonframework.config.Configurer;
 import org.axonframework.config.DefaultConfigurer;
 import org.axonframework.metrics.MessageCountingMonitor;
-import org.axonframework.messaging.MessageMonitorFactory;
+import org.axonframework.messaging.MessageMonitor;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,12 +20,10 @@ public class AxonMetricsConfig {
 
     @Bean
     public org.axonframework.config.Configuration axonConfiguration(MetricRegistry metricRegistry) {
-        MessageMonitorFactory monitorFactory =
-                (configuration, componentType, componentName) ->
-                        MessageCountingMonitor.buildMonitor(componentName, metricRegistry);
-
         Configurer configurer = DefaultConfigurer.defaultConfiguration()
-                .configureMessageMonitor(monitorFactory);
+                .configureMessageMonitor((configuration, componentType, componentName) ->
+                        MessageCountingMonitor.buildMonitor(componentName, metricRegistry)
+                );
 
         org.axonframework.config.Configuration configuration = configurer.buildConfiguration();
         configuration.start();
@@ -34,9 +32,6 @@ public class AxonMetricsConfig {
 
     @Bean
     public ServletRegistrationBean<MetricsServlet> metricsServlet(MetricRegistry metricRegistry) {
-        ServletRegistrationBean<MetricsServlet> bean =
-                new ServletRegistrationBean<>(new MetricsServlet(metricRegistry), "/metrics/*");
-        bean.setLoadOnStartup(1);
-        return bean;
+        return new ServletRegistrationBean<>(new MetricsServlet(metricRegistry), "/metrics/*");
     }
 }
