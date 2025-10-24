@@ -1,27 +1,12 @@
-dependencies {
-    implementation 'org.axonframework:axon-metrics:4.9.0'
-    implementation 'io.dropwizard.metrics:metrics-core:4.1.2'
-    implementation 'io.dropwizard.metrics:metrics-servlets:4.1.2'
-}
-
 import com.codahale.metrics.MetricRegistry;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-@Configuration
-public class MetricsBeanConfig {
-    @Bean
-    public MetricRegistry dropwizardMetricRegistry() {
-        return new MetricRegistry();
-    }
-}
-
 import org.axonframework.config.Configurer;
 import org.axonframework.config.DefaultConfigurer;
 import org.axonframework.metrics.GlobalMetricRegistry;
+import org.axonframework.metrics.MessageCountingMonitor;
+import org.axonframework.messaging.MessageMonitor;
+import org.axonframework.messaging.MessageMonitorFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import com.codahale.metrics.MetricRegistry;
 
 @Configuration
 public class AxonDropwizardConfig {
@@ -30,12 +15,15 @@ public class AxonDropwizardConfig {
     public org.axonframework.config.Configuration axonConfig(MetricRegistry metricRegistry) {
         GlobalMetricRegistry globalRegistry = new GlobalMetricRegistry(metricRegistry);
 
-        Configurer configurer = DefaultConfigurer.defaultConfiguration();
-        configurer.configureMessageMonitor((c, type, name) ->
-                globalRegistry.registerMessageMonitor(type, name));
+        MessageMonitorFactory monitorFactory = (configuration, componentType, componentName) ->
+                MessageCountingMonitor.buildMonitor(componentName, metricRegistry);
 
-        var configuration = configurer.buildConfiguration();
+        Configurer configurer = DefaultConfigurer.defaultConfiguration()
+                .configureMessageMonitor(monitorFactory);
+
+        org.axonframework.config.Configuration configuration = configurer.buildConfiguration();
         configuration.start();
+
         return configuration;
     }
 }
@@ -52,10 +40,6 @@ public class MetricsServletConfig {
 
     @Bean
     public ServletRegistrationBean<MetricsServlet> metricsServlet(MetricRegistry metricRegistry) {
-        ServletRegistrationBean<MetricsServlet> servlet = new ServletRegistrationBean<>(new MetricsServlet(), "/metrics/*");
-        servlet.addInitParameter("metrics-registry", metricRegistry.toString());
-        return servlet;
+        return new ServletRegistrationBean<>(new MetricsServlet(metricRegistry), "/metrics/*");
     }
 }
-
-
