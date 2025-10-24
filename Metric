@@ -1,24 +1,61 @@
-implementation "org.axonframework.extensions.micrometer:axon-micrometer:4.9.0"
+dependencies {
+    implementation 'org.axonframework:axon-metrics:4.9.0'
+    implementation 'io.dropwizard.metrics:metrics-core:4.1.2'
+    implementation 'io.dropwizard.metrics:metrics-servlets:4.1.2'
+}
 
-# Expose metrics and Prometheus endpoints
-management.endpoints.web.exposure.include=health,metrics,prometheus
-
-# Optional: change Actuator base path
-# management.endpoints.web.base-path=/actuator
-
-import io.micrometer.core.instrument.MeterRegistry;
-import org.axonframework.extensions.micrometer.MicrometerConfig;
+import com.codahale.metrics.MetricRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class AxonMetricsConfig {
-
+public class MetricsBeanConfig {
     @Bean
-    public MicrometerConfig axonMicrometerConfig(MeterRegistry meterRegistry) {
-        return MicrometerConfig.builder()
-                .meterRegistry(meterRegistry)
-                .build();
+    public MetricRegistry dropwizardMetricRegistry() {
+        return new MetricRegistry();
     }
 }
+
+import org.axonframework.config.Configurer;
+import org.axonframework.config.DefaultConfigurer;
+import org.axonframework.metrics.GlobalMetricRegistry;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import com.codahale.metrics.MetricRegistry;
+
+@Configuration
+public class AxonDropwizardConfig {
+
+    @Bean
+    public org.axonframework.config.Configuration axonConfig(MetricRegistry metricRegistry) {
+        GlobalMetricRegistry globalRegistry = new GlobalMetricRegistry(metricRegistry);
+
+        Configurer configurer = DefaultConfigurer.defaultConfiguration();
+        configurer.configureMessageMonitor((c, type, name) ->
+                globalRegistry.registerMessageMonitor(type, name));
+
+        var configuration = configurer.buildConfiguration();
+        configuration.start();
+        return configuration;
+    }
+}
+
+
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.servlets.MetricsServlet;
+import org.springframework.boot.web.servlet.ServletRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class MetricsServletConfig {
+
+    @Bean
+    public ServletRegistrationBean<MetricsServlet> metricsServlet(MetricRegistry metricRegistry) {
+        ServletRegistrationBean<MetricsServlet> servlet = new ServletRegistrationBean<>(new MetricsServlet(), "/metrics/*");
+        servlet.addInitParameter("metrics-registry", metricRegistry.toString());
+        return servlet;
+    }
+}
+
 
