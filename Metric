@@ -13,11 +13,13 @@ import org.springframework.context.annotation.Configuration as SpringConfigurati
 @SpringConfiguration
 public class AxonMetricsConfig {
 
+    // 2a. Metric registry bean
     @Bean
     public MetricRegistry metricRegistry() {
         return new MetricRegistry();
     }
 
+    // 2b. Wire Axon to the Dropwizard MetricRegistry
     @Bean
     public Configuration axonConfiguration(MetricRegistry metricRegistry) {
         Configurer configurer = DefaultConfigurer.defaultConfiguration()
@@ -30,6 +32,7 @@ public class AxonMetricsConfig {
         return configuration;
     }
 
+    // 2c. Expose metrics over HTTP at /metrics
     @Bean
     public ServletRegistrationBean<MetricsServlet> metricsServlet(MetricRegistry metricRegistry) {
         return new ServletRegistrationBean<>(new MetricsServlet(metricRegistry), "/metrics/*");
